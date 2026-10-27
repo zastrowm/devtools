@@ -3,12 +3,18 @@ import os
 import sys
 
 import pytest
+import yaml
 
 # agent_runner imports its sibling modules by absolute name (as it does when the
 # action runs it as a script), so put its directory on the path first.
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import agent_runner  # noqa: E402
+
+ACTION_YML = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "..", "..", "..", "actions", "strands-agent-runner", "action.yml",
+)
 
 
 @pytest.fixture(autouse=True)
@@ -72,3 +78,11 @@ def test_main_prints_the_resolved_model_and_effort(monkeypatch, capsys):
     out = capsys.readouterr().out
     assert out.count("model=global.anthropic.claude-opus-4-8 effort=medium") == 1
     assert calls == [("review", "global.anthropic.claude-opus-4-8", "medium")]
+
+
+def test_action_input_defaults_match_the_runner_defaults():
+    """The action.yml input defaults and the Python defaults are the same values."""
+    with open(ACTION_YML) as f:
+        inputs = yaml.safe_load(f)["inputs"]
+    assert inputs["model_id"]["default"] == agent_runner.STRANDS_MODEL_ID
+    assert inputs["reasoning_effort"]["default"] == agent_runner.STRANDS_REASONING_EFFORT
