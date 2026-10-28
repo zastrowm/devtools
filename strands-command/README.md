@@ -299,7 +299,7 @@ Each action runs the scripts and agent SOPs from the same devtools commit as its
         uses: my-org/devtools/strands-command/actions/strands-agent-runner@my-branch
 ```
 
-Pin all three actions to the same ref so the parser, runner and finalize steps agree.
+Pin all four actions, `authorization-check` included, to the same ref so every step agrees.
 
 ### strands-input-parser
 
