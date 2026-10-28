@@ -14,6 +14,10 @@ inputs:
     description: 'Additional instructions to append to the system prompt'
     required: false
     default: ''
+  system_prompt_suffix_modes:
+    description: 'Comma- or newline-separated agent modes that get system_prompt_suffix (implementer, refiner, release-notes, reviewer, bug-verifier). Blank sends it to every mode. An unknown mode name fails the step'
+    required: false
+    default: ''
   head_sha:
     description: 'PR head SHA resolved up front (from the authorization job for a /strands comment, or the pull_request event SHA for auto-review). Required for pull requests; the parser stops rather than resolve live HEAD.'
     required: false
@@ -59,6 +63,8 @@ runs:
         # surrounding JS template literal. head_ref is an arbitrary branch name,
         # so it gets the same treatment.
         SYSTEM_PROMPT_SUFFIX: ${{ inputs.system_prompt_suffix }}
+        # A newline-separated list would break a single-quoted JS string.
+        SYSTEM_PROMPT_SUFFIX_MODES: ${{ inputs.system_prompt_suffix_modes }}
         HEAD_SHA: ${{ inputs.head_sha }}
         HEAD_REPO: ${{ inputs.head_repo }}
         HEAD_REF: ${{ inputs.head_ref }}
@@ -72,7 +78,8 @@ runs:
             head_sha: process.env.HEAD_SHA,
             head_repo: process.env.HEAD_REPO,
             head_ref: process.env.HEAD_REF,
-            system_prompt_suffix: process.env.SYSTEM_PROMPT_SUFFIX
+            system_prompt_suffix: process.env.SYSTEM_PROMPT_SUFFIX,
+            system_prompt_suffix_modes: process.env.SYSTEM_PROMPT_SUFFIX_MODES
           });
 
     - name: Upload parsed input artifact

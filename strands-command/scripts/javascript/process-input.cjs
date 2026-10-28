@@ -4,6 +4,31 @@
 
 const fs = require('fs');
 
+const scriptFiles = {
+  'implementer': 'devtools/strands-command/agent-sops/task-implementer.sop.md',
+  'refiner': 'devtools/strands-command/agent-sops/task-refiner.sop.md',
+  'release-notes': 'devtools/strands-command/agent-sops/task-release-notes.sop.md',
+  'reviewer': 'devtools/strands-command/agent-sops/task-reviewer.sop.md',
+  'bug-verifier': 'devtools/strands-command/agent-sops/task-bug-verifier.sop.md'
+};
+
+// Parse system_prompt_suffix_modes: a comma- or newline-separated list of mode
+// names. Returns null when the list is blank, meaning the suffix goes to every
+// mode. Throws on a name that is not a mode, so a typo fails the run instead of
+// silently dropping the suffix.
+function parseSuffixModes(raw) {
+  const names = (raw || '').split(/[,\n]/).map(name => name.trim()).filter(Boolean);
+  if (names.length === 0) {
+    return null;
+  }
+  const validModes = Object.keys(scriptFiles);
+  const unknown = names.filter(name => !validModes.includes(name));
+  if (unknown.length > 0) {
+    throw new Error(`Unknown mode in system_prompt_suffix_modes: ${unknown.join(', ')}. Valid modes: ${validModes.join(', ')}`);
+  }
+  return names;
+}
+
 async function getIssueInfo(github, context, inputs) {
   const issueId = context.eventName === 'workflow_dispatch' 
     ? inputs.issue_id
@@ -78,23 +103,15 @@ async function determineBranch(github, context, issueId, mode, isPullRequest, in
   return { branchName, headRepo, headSha };
 }
 
-function buildPrompts(mode, issueId, isPullRequest, command, branchName, inputs, issue, headSha) {
+function buildPrompts(mode, issueId, isPullRequest, command, branchName, inputs, issue, headSha, suffixModes) {
   const sessionId = inputs.session_id || (mode === 'implementer' 
     ? `${mode}-${branchName}`.replace(/[\/\\]/g, '-')
     : `${mode}-${issueId}`);
 
-  const scriptFiles = {
-    'implementer': 'devtools/strands-command/agent-sops/task-implementer.sop.md',
-    'refiner': 'devtools/strands-command/agent-sops/task-refiner.sop.md',
-    'release-notes': 'devtools/strands-command/agent-sops/task-release-notes.sop.md',
-    'reviewer': 'devtools/strands-command/agent-sops/task-reviewer.sop.md',
-    'bug-verifier': 'devtools/strands-command/agent-sops/task-bug-verifier.sop.md'
-  };
-  
   const scriptFile = scriptFiles[mode] || scriptFiles['refiner'];
   let systemPrompt = fs.readFileSync(scriptFile, 'utf8');
 
-  if (inputs.system_prompt_suffix) {
+  if (inputs.system_prompt_suffix && (!suffixModes || suffixModes.includes(mode))) {
     systemPrompt += '\n\n' + inputs.system_prompt_suffix;
   }
   
@@ -123,6 +140,7 @@ function buildPrompts(mode, issueId, isPullRequest, command, branchName, inputs,
 
 module.exports = async (context, github, core, inputs) => {
   try {
+    const suffixModes = parseSuffixModes(inputs.system_prompt_suffix_modes);
     const { issueId, command, issue } = await getIssueInfo(github, context, inputs);
     
     const isPullRequest = !!issue.data.pull_request;
@@ -148,7 +166,7 @@ module.exports = async (context, github, core, inputs) => {
     const { branchName, headRepo, headSha } = await determineBranch(github, context, issueId, mode, isPullRequest, inputs);
     console.log(`Building prompts - mode: ${mode}, issue: ${issueId}, is PR: ${isPullRequest}`);
 
-    const { sessionId, systemPrompt, prompt } = buildPrompts(mode, issueId, isPullRequest, command, branchName, inputs, issue, headSha);
+    const { sessionId, systemPrompt, prompt } = buildPrompts(mode, issueId, isPullRequest, command, branchName, inputs, issue, headSha, suffixModes);
     
     console.log(`Session ID: ${sessionId}`);
     console.log(`Task prompt: "${prompt}"`);

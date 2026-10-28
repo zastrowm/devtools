@@ -300,6 +300,20 @@ Parses `/strands` command input and prepares execution parameters for the agent 
 - `issue_id` (optional): Issue or PR number
 - `command` (optional): Strands command text
 - `session_id` (optional): Session ID for resuming previous sessions
+- `system_prompt_suffix` (optional): Extra instructions appended to the agent's system prompt
+- `system_prompt_suffix_modes` (optional): Comma- or newline-separated modes that get `system_prompt_suffix`: `implementer`, `refiner`, `release-notes`, `reviewer`, `bug-verifier`. Blank sends the suffix to every mode. An unknown mode name stops the run before the agent starts
+
+To give only the reviewer your repository's review rules, name the mode next to the suffix:
+
+```yaml
+      - name: Parse input
+        uses: strands-agents/devtools/strands-command/actions/strands-input-parser@main
+        with:
+          system_prompt_suffix: ${{ steps.prompt.outputs.suffix }}
+          system_prompt_suffix_modes: reviewer
+```
+
+The implementer, refiner and other modes then run with their standard prompt.
 
 **Outputs:**
 - Artifact: `strands-parsed-input` containing:
