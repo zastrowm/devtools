@@ -147,15 +147,18 @@ runs:
           echo "exists=false" >> $GITHUB_OUTPUT
         fi
     
-    - name: Checkout devtools repo
+    # Copy the scripts from the same devtools commit as this action, so a consumer
+    # that pins the action also pins the write executor. GITHUB_ACTION_PATH is this
+    # action's directory in the devtools copy that the runner downloaded for `uses:`.
+    # The copy goes to the runner temp directory so repository content cant overwrite
+    # the scripts executed here
+    - name: Copy devtools to safe directory
       if: steps.check-write-ops.outputs.exists == 'true'
-      uses: actions/checkout@v5
-      with:
-        repository: strands-agents/devtools
-        ref: main
-        sparse-checkout: |
-          strands-command/scripts
-        path: devtools
+      shell: bash
+      run: |
+        DEVTOOLS_COMMAND_DIR="$(cd "$GITHUB_ACTION_PATH/../.." && pwd)"
+        mkdir -p ${{ runner.temp }}/strands-finalize/strands-command
+        cp -r "$DEVTOOLS_COMMAND_DIR/scripts" ${{ runner.temp }}/strands-finalize/strands-command/
       
     - name: Set up Python
       if: steps.check-write-ops.outputs.exists == 'true'
@@ -168,14 +171,14 @@ runs:
       uses: astral-sh/setup-uv@v3
       with:
         enable-cache: true
-        cache-dependency-glob: devtools/strands-command/scripts/python/pyproject.toml
+        cache-dependency-glob: '${{ runner.temp }}/strands-finalize/strands-command/scripts/python/pyproject.toml'
 
     - name: Install dependencies
       if: steps.check-write-ops.outputs.exists == 'true'
       shell: bash
       run: |
         echo "📦 Installing from pyproject.toml"
-        uv pip install --system devtools/strands-command/scripts/python --quiet
+        uv pip install --system ${{ runner.temp }}/strands-finalize/strands-command/scripts/python --quiet
 
     - name: Execute write operations
       if: steps.check-write-ops.outputs.exists == 'true'
@@ -192,9 +195,9 @@ runs:
       run: |
         echo "🚀 Strands Write Executor - Processing write operations"
         if [ -n "$ISSUE_ID" ]; then
-          python devtools/strands-command/scripts/python/write_executor.py "$RUNNER_TEMP_DIR/write_operations.jsonl" --issue-id "$ISSUE_ID"
+          python ${{ runner.temp }}/strands-finalize/strands-command/scripts/python/write_executor.py "$RUNNER_TEMP_DIR/write_operations.jsonl" --issue-id "$ISSUE_ID"
         else
-          python devtools/strands-command/scripts/python/write_executor.py "$RUNNER_TEMP_DIR/write_operations.jsonl"
+          python ${{ runner.temp }}/strands-finalize/strands-command/scripts/python/write_executor.py "$RUNNER_TEMP_DIR/write_operations.jsonl"
         fi
 
     - name: Remove strands-running label
