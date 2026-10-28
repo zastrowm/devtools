@@ -34,27 +34,14 @@ outputs:
 runs:
   using: 'composite'
   steps:
-    # Copy the scripts from the same devtools commit as this action, so a consumer
-    # that pins the action also pins the scripts. GITHUB_ACTION_PATH is this
-    # action's directory in the devtools copy that the runner downloaded for `uses:`.
-    # The copy goes to the runner temp directory so repository content cant overwrite
-    # the scripts executed here
-    - name: Copy scripts to safe directory
-      shell: bash
-      run: |
-        mkdir -p ${{ runner.temp }}/authorization-check
-        cp -r "$GITHUB_ACTION_PATH/scripts" ${{ runner.temp }}/authorization-check/
-
     - name: Collaborator Check
       if: inputs.skip-check != 'true'
       uses: actions/github-script@v8
       id: collab-check
-      env:
-        AUTHORIZATION_CHECK_DIR: ${{ runner.temp }}/authorization-check
       with:
         result-encoding: string
         script: |
-          const checkAuthorization = require(`${process.env.AUTHORIZATION_CHECK_DIR}/scripts/check-authorization.cjs`);
+          const checkAuthorization = require('${{ github.action_path }}/scripts/check-authorization.cjs');
           return await checkAuthorization(context, github, {
             username: '${{ inputs.username }}',
             allowedRoles: '${{ inputs.allowed-roles }}'
@@ -75,11 +62,9 @@ runs:
     - name: Pin and verify head commit
       id: pin
       uses: actions/github-script@v8
-      env:
-        AUTHORIZATION_CHECK_DIR: ${{ runner.temp }}/authorization-check
       with:
         script: |
-          const pinAndVerify = require(`${process.env.AUTHORIZATION_CHECK_DIR}/scripts/pin-and-verify.cjs`);
+          const pinAndVerify = require('${{ github.action_path }}/scripts/pin-and-verify.cjs');
           const result = await pinAndVerify(context, github, { issueId: '${{ inputs.issue-id }}' });
           if (result) {
             core.setOutput('head-sha', result.headSha);
