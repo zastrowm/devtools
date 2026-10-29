@@ -61,17 +61,19 @@ runs:
         # $GITHUB_OUTPUT. Stash outside the workspace, which the repository checkout below replaces.
         cp strands-parsed-input.json ${{ runner.temp }}/strands-parsed-input.json
 
-    # Copy the scripts and SOPs from the same devtools commit as this action, so a
-    # consumer that pins the action also pins the runner. GITHUB_ACTION_PATH is this
-    # action's directory in the devtools copy that the runner downloaded for `uses:`.
-    # The copy goes to the runner temp directory so the branch content cant overwrite
-    # the scripts executed here
+    # Checkout devtools repo for scripts
+    - name: Checkout devtools
+      shell: bash
+      run: |
+        mkdir -p devtools/strands-command
+        cp -r "$GITHUB_ACTION_PATH/../../scripts" "$GITHUB_ACTION_PATH/../../agent-sops" devtools/strands-command/
+
+    # Copy the devtools directory to the runner temp directory so the branch content cant overwrite the scripts executed here
     - name: Copy devtools to safe directory
       shell: bash
       run: |
-        DEVTOOLS_COMMAND_DIR="$(cd "$GITHUB_ACTION_PATH/../.." && pwd)"
-        mkdir -p ${{ runner.temp }}/strands-agent-runner/strands-command
-        cp -r "$DEVTOOLS_COMMAND_DIR/scripts" "$DEVTOOLS_COMMAND_DIR/agent-sops" ${{ runner.temp }}/strands-agent-runner/strands-command/
+        mkdir -p ${{ runner.temp }}/strands-agent-runner
+        cp -r devtools/strands-command ${{ runner.temp }}/strands-agent-runner/
 
     # Checkout the branch repo to stage the directory for the agent
     - name: Checkout repository

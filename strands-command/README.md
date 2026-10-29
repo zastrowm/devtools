@@ -292,14 +292,7 @@ Permission Policy:
 
 ## Actions
 
-Each action runs the scripts and agent SOPs from the same devtools commit as its `uses:` line, so the pin you choose is the code you run. `@main` follows main; a tag, a commit SHA, or a fork branch runs that version's scripts too:
-
-```yaml
-      - name: Run Strands Agent
-        uses: my-org/devtools/strands-command/actions/strands-agent-runner@my-branch
-```
-
-Pin all four actions, `authorization-check` included, to the same ref so every step agrees.
+Each action runs the scripts and SOPs from the devtools copy its `uses:` line names. To test a devtools change, point all four `uses:` lines (`authorization-check` included) at your repo and ref, e.g. `my-org/devtools/strands-command/actions/strands-agent-runner@my-branch`.
 
 ### strands-input-parser
 

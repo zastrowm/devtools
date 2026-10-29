@@ -3,7 +3,6 @@
 // const core = require('@actions/core');
 
 const fs = require('fs');
-const path = require('path');
 
 async function getIssueInfo(github, context, inputs) {
   const issueId = context.eventName === 'workflow_dispatch' 
@@ -84,17 +83,15 @@ function buildPrompts(mode, issueId, isPullRequest, command, branchName, inputs,
     ? `${mode}-${branchName}`.replace(/[\/\\]/g, '-')
     : `${mode}-${issueId}`);
 
-  // SOPs sit beside this script's own copy of strands-command, so they always
-  // come from the same devtools commit as the script.
   const scriptFiles = {
-    'implementer': 'task-implementer.sop.md',
-    'refiner': 'task-refiner.sop.md',
-    'release-notes': 'task-release-notes.sop.md',
-    'reviewer': 'task-reviewer.sop.md',
-    'bug-verifier': 'task-bug-verifier.sop.md'
+    'implementer': 'devtools/strands-command/agent-sops/task-implementer.sop.md',
+    'refiner': 'devtools/strands-command/agent-sops/task-refiner.sop.md',
+    'release-notes': 'devtools/strands-command/agent-sops/task-release-notes.sop.md',
+    'reviewer': 'devtools/strands-command/agent-sops/task-reviewer.sop.md',
+    'bug-verifier': 'devtools/strands-command/agent-sops/task-bug-verifier.sop.md'
   };
   
-  const scriptFile = path.join(__dirname, '..', '..', 'agent-sops', scriptFiles[mode] || scriptFiles['refiner']);
+  const scriptFile = scriptFiles[mode] || scriptFiles['refiner'];
   let systemPrompt = fs.readFileSync(scriptFile, 'utf8');
 
   if (inputs.system_prompt_suffix) {
